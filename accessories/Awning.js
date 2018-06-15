@@ -156,9 +156,11 @@ Awning.prototype = {
     },
 
     onStateUpdate: function(name, value) {
-    	if (name == 'core:ClosureState' || name == 'core:TargetClosureState') {
-			var converted = 100 - value;
-			this.currentPosition.updateValue(converted);
+                this.log('[' + this.name + '] ' + name + '=' + value);
+        if (name == 'core:ClosureState' || name == 'core:TargetClosureState') {
+                        //var converted = 100 - value;
+                        var converted = 99 - value; // Workaround for io:RollerShutterVeluxIOComponent
+                        this.currentPosition.updateValue(converted);
 			if (!this.isCommandInProgress()) // if no command running, update target
 				this.targetPosition.updateValue(converted);
 		} else if (name == 'core:DeploymentState') {
