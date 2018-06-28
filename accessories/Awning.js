@@ -23,6 +23,7 @@ Awning = function(log, api, device, config) {
 	
     this.currentPosition = service.getCharacteristic(Characteristic.CurrentPosition);
     this.targetPosition = service.getCharacteristic(Characteristic.TargetPosition);
+    this.obstructionDetected = service.addCharacteristic(Characteristic.ObstructionDetected);
     if(this.device.widget.startsWith('UpDown')) {
     	this.targetPosition.on('set', this.upDownCommand.bind(this));
     	this.currentPosition.updateValue(def);
