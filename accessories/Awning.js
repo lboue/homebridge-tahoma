@@ -1,4 +1,5 @@
 var Service, Characteristic, Command, ExecutionState, State, AbstractAccessory;
+var util = require('util')
 
 module.exports = function(homebridge, abstractAccessory, api) {
     AbstractAccessory = abstractAccessory;
@@ -23,13 +24,25 @@ Awning = function(log, api, device, config) {
 	
     this.currentPosition = service.getCharacteristic(Characteristic.CurrentPosition);
     this.targetPosition = service.getCharacteristic(Characteristic.TargetPosition);
-    this.obstructionDetected = service.addCharacteristic(Characteristic.ObstructionDetected);
     if(this.device.widget.startsWith('UpDown')) {
+    	this.targetPosition.on('set', this.openCloseCommand.bind(this));
+    	this.currentPosition.updateValue(def);
+    	this.targetPosition.updateValue(def);
+    } else if(this.device.widget.startsWith('RTS')) {
     	this.targetPosition.on('set', this.upDownCommand.bind(this));
     	this.currentPosition.updateValue(def);
     	this.targetPosition.updateValue(def);
     } else {
     	this.targetPosition.on('set', this.postpone.bind(this, this.setClosure.bind(this)));
+		this.log.info('addCharacteristic(Characteristic.ObstructionDetected)');
+		
+		service.addCharacteristic(Characteristic.ObstructionDetected);
+    	this.obstruction = service.getCharacteristic(Characteristic.ObstructionDetected);
+		this.log.info('inspect NO this.obstruction=' + util.inspect(this.obstruction, {depth: null}));
+		
+		// ObstructionDetected TRUE for testing
+		service.setCharacteristic(Characteristic.ObstructionDetected, true);
+		this.log.info('inspect YES this.obstruction=' + util.inspect(this.obstruction, {depth: null}));
     }
     this.positionState = service.getCharacteristic(Characteristic.PositionState);
     this.positionState.updateValue(Characteristic.PositionState.STOPPED);
@@ -69,6 +82,12 @@ Awning.prototype = {
 				case ExecutionState.FAILED:
 					that.positionState.updateValue(Characteristic.PositionState.STOPPED);
 					that.targetPosition.updateValue(that.currentPosition.value); // Update target position in case of cancellation
+					that.log.info('Before this.obtruction != null');
+					if(this.obtruction != null) {
+						this.obtruction.updateValue(error == 'WHILEEXEC_BLOCKED_BY_HAZARD');
+						that.log.info('this.obtruction != null');
+						this.getService(Service.WindowCovering).setCharacteristic(Characteristic.ObstructionDetected, Characteristic.ObstructionDetected.YES)
+					}
 					break;
 				default:
 					break;
@@ -103,9 +122,41 @@ Awning.prototype = {
     },
     
     /**
-	* Triggered when Homekit try to modify the Characteristic.TargetPosition for UpDownRollerShutter
+	* Triggered when Homekit try to modify the Characteristic.TargetPosition for RTS RollerShutter
 	**/
     upDownCommand: function(value, callback) {
+    	var that = this;
+		var command;
+		switch(value) {
+			case 100: command = new Command('up'); break;
+			case 0: command = new Command('down'); break;
+			default: command = new Command('my'); break;
+		}
+		this.executeCommand(command, function(status, error, data) {
+			switch (status) {
+				case ExecutionState.INITIALIZED:
+					callback(error);
+					break;
+				case ExecutionState.IN_PROGRESS:
+					var newValue = (value == 100 || value > that.currentPosition.value) ? Characteristic.PositionState.INCREASING : Characteristic.PositionState.DECREASING;
+					that.positionState.updateValue(newValue);
+					break;
+				case ExecutionState.COMPLETED:
+					that.currentPosition.updateValue(value);
+				case ExecutionState.FAILED:
+					that.positionState.updateValue(Characteristic.PositionState.STOPPED);
+					that.targetPosition.updateValue(that.currentPosition.value); // Update target position in case of cancellation
+					break;
+				default:
+					break;
+			}
+		});
+    },
+    
+    /**
+	* Triggered when Homekit try to modify the Characteristic.TargetPosition for UpDownRollerShutter
+	**/
+    openCloseCommand: function(value, callback) {
     	var that = this;
 		var command;
 		switch(value) {
