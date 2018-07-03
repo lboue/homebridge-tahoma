@@ -38,11 +38,11 @@ Awning = function(log, api, device, config) {
 		
 		service.addCharacteristic(Characteristic.ObstructionDetected);
     	this.obstruction = service.getCharacteristic(Characteristic.ObstructionDetected);
-		this.log.info('inspect NO this.obstruction=' + util.inspect(this.obstruction, {depth: null}));
+		this.log.info('inspect NO THIS.obstruction=' + util.inspect(this.obstruction, {depth: null}));
 		
 		// ObstructionDetected TRUE for testing
-		service.setCharacteristic(Characteristic.ObstructionDetected, true);
-		this.log.info('inspect YES this.obstruction=' + util.inspect(this.obstruction, {depth: null}));
+		//service.setCharacteristic(Characteristic.ObstructionDetected, true);
+		//this.log.info('inspect YES this.obstruction=' + util.inspect(this.obstruction, {depth: null}));
     }
     this.positionState = service.getCharacteristic(Characteristic.PositionState);
     this.positionState.updateValue(Characteristic.PositionState.STOPPED);
@@ -55,7 +55,7 @@ Awning = function(log, api, device, config) {
     		break;
     	}
     }
-    
+    this.service = service
     this.services.push(service);
 };
 
@@ -82,11 +82,19 @@ Awning.prototype = {
 				case ExecutionState.FAILED:
 					that.positionState.updateValue(Characteristic.PositionState.STOPPED);
 					that.targetPosition.updateValue(that.currentPosition.value); // Update target position in case of cancellation
-					that.log.info('Before this.obtruction != null');
-					if(this.obtruction != null) {
-						this.obtruction.updateValue(error == 'WHILEEXEC_BLOCKED_BY_HAZARD');
-						that.log.info('this.obtruction != null');
-						this.getService(Service.WindowCovering).setCharacteristic(Characteristic.ObstructionDetected, Characteristic.ObstructionDetected.YES)
+					that.log.info('Before that.obtruction != null');
+					//that.getService(Service.WindowCovering).setCharacteristic(Characteristic.ObstructionDetected, Characteristic.ObstructionDetected.YES)
+					//this.obtruction.updateValue(error == 'WHILEEXEC_BLOCKED_BY_HAZARD');
+					//that.obtruction.setCharacteristic(Characteristic.ObstructionDetected, Characteristic.ObstructionDetected.YES) //KO TypeError: Cannot read property 'setCharacteristic' of undefined
+					that.log.info('Before inspect that.obstruction=' + util.inspect(that.obstruction, {depth: null}));
+					//this.obtruction.updateValue(true)
+					that.log.info('Before inspect this.service=' + util.inspect(that.service, {depth: null}));
+					//this.getService(Service.WindowCovering).setCharacteristic(Characteristic.ObstructionDetected, true);
+					//this.service.setCharacteristic(Characteristic.ObstructionDetected, true);
+					if(that.obtruction != null) {
+						that.obtruction.updateValue(error == 'WHILEEXEC_BLOCKED_BY_HAZARD');
+						that.log.info('in condiction that.obtruction != null');
+						that.getService(Service.WindowCovering).setCharacteristic(Characteristic.ObstructionDetected, Characteristic.ObstructionDetected.YES)
 					}
 					break;
 				default:
